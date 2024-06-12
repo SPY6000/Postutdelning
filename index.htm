@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PostNord Utdelningsdag</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 400px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px; /* Add some space to the right */
+            width: calc(100% - 90px); /* Shorten the input field */
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        .arrival {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .arrival h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        .arrival p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PostNord Utdelningsdag</h1>
+        <div class="input-container">
+            <input type="text" id="postalCodeInput" placeholder="Postnummer">
+            <button onclick="updateURL()">Sök</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function fetchData(postalCode) {
+            try {
+                const response = await fetch(`https://portal.postnord.com/api/sendoutarrival/closest?postalCode=${postalCode}`);
+                const data = await response.json();
+                displayData(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                displayError('Error fetching data');
+            }
+        }
+
+        function displayData(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = ''; // Clear previous results
+
+            const postalInfo = document.createElement('div');
+            postalInfo.className = 'arrival';
+
+            // Display today's date
+            const today = new Date();
+            postalInfo.innerHTML = `<p><strong>Dagens datum:</strong> ${formatDate(today)}</p>
+                                    <p><strong>Postnummer:</strong> ${data.postalCode}, <strong>Stad:</strong> ${data.city}</p>`;
+
+            resultDiv.appendChild(postalInfo);
+
+            if (!data.delivery || !data.upcoming) {
+                displayError('Inga utdelningar hittades');
+                return;
+            }
+
+            const deliveryDiv = document.createElement('div');
+            deliveryDiv.className = 'arrival';
+
+            const deliveryTitle = document.createElement('h2');
+            deliveryTitle.innerText = "Nästa";
+            deliveryDiv.appendChild(deliveryTitle);
+
+            const deliveryDate = document.createElement('p');
+            deliveryDate.innerHTML = `<strong>Datum:</strong> ${data.delivery}`;
+            deliveryDiv.appendChild(deliveryDate);
+
+            resultDiv.appendChild(deliveryDiv);
+
+            const upcomingDiv = document.createElement('div');
+            upcomingDiv.className = 'arrival';
+
+            const upcomingTitle = document.createElement('h2');
+            upcomingTitle.innerText = "Kommande";
+            upcomingDiv.appendChild(upcomingTitle);
+
+            const upcomingDate = document.createElement('p');
+            upcomingDate.innerHTML = `<strong>Datum:</strong> ${data.upcoming}`;
+            upcomingDiv.appendChild(upcomingDate);
+
+            resultDiv.appendChild(upcomingDiv);
+        }
+
+        function updateURL() {
+            const postalCode = document.getElementById('postalCodeInput').value;
+            if (!postalCode) {
+                alert('Vänligen ange ett postnummer');
+                return;
+            }
+            const newUrl = `${window.location.pathname}?postalCode=${postalCode}`;
+            window.history.pushState({path: newUrl}, '', newUrl);
+            fetchData(postalCode);
+        }
+
+        function displayError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p>${message}</p>`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const postalCode = getQueryParam('postalCode');
+            if (postalCode) {
+                document.getElementById('postalCodeInput').value = postalCode;
+                fetchData(postalCode);
+            }
+            
+            document.getElementById('postalCodeInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    updateURL();
+                }
+            });
+        });
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function formatDate(date) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('sv-SE', options);
+        }
+    </script>
+</body>
+</html>
